@@ -24,9 +24,9 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 - [x] Create the repo with the folder structure from CONTEXT.md
 - [x] `.gitignore` (including `.env`, `*.db`, `node_modules`, `__pycache__`) and `.env.example`
 - [x] README stub and `docs/journal.md`
-- [ ] Install a pre-commit secret scanner (gitleaks) and test it by committing a fake secret
-- [ ] `docs/threat-model.md` v0: assets, actors, entry points, top 10 threats (STRIDE)
-- **Break it:** commit a fake API key, see the scanner block it, then learn how to rotate a leaked key.
+- [x] Install a pre-commit secret scanner (gitleaks) and test it by committing a fake secret
+- [x] `docs/threat-model.md` v0: assets, actors, entry points, top 10 threats (STRIDE)
+- [x] **Break it:** commit a fake API key, see the scanner block it, then learn how to rotate a leaked key.
 
 ## M1: Data and API
 **Demo:** a running API with documented endpoints and passing tests.
