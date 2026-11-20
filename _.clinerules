@@ -1,0 +1,5 @@
+Before starting any task, read CONTEXT.md and PLAN.md in the project root.
+Do only the task the user names. Do not start the next task.
+Work in small steps, run the tests after each change, and never read or modify .env.
+Follow the security rules in CONTEXT.md. If a package may not exist, say so instead of guessing.
+When a task is done, update its checkbox in PLAN.md and summarize what changed.
