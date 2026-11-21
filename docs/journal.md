@@ -29,4 +29,18 @@ This journal records learning progress, security insights, architectural decisio
 
 ---
 
+## M1: Data and API
+
+### Task: Database Schema
+- Created `backend/schema.sql` defining 5 tables: `users`, `listings`, `leads`, `visits`, `audit_log`.
+- Enforced security constraints:
+  - **Parameterized Queries**: All SQL execution uses `?` placeholders via `sqlite3.Row` context managers.
+  - **Data Integrity**: Implemented `CHECK` constraints on `role`, `status`, and `price_mad` to reject invalid data at the database level.
+  - **Foreign Keys**: Defined relationships between `listings` and `users`, and `leads`/`visits` and `listings`.
+- Created `backend/database.py` for safe connection management.
+- Added `tests/test_schema.py` to verify table existence and constraint enforcement (e.g., rejecting invalid roles and negative prices).
+- Ran tests successfully: `4 passed in 0.12s`.
+
+---
+
 *Last updated: 2026-11-20*
