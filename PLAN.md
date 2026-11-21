@@ -31,7 +31,7 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 ## M1: Data and API
 **Demo:** a running API with documented endpoints and passing tests.
 - [x] Schema: `users`, `listings`, `leads`, `visits`, `audit_log`
-- [ ] Script that generates 50 to 100 fictional listings (French, Casablanca/Marrakech neighborhoods, prices in MAD)
+- [x] Script that generates 50 to 100 fictional listings (French, Casablanca/Marrakech neighborhoods, prices in MAD)
 - [ ] FastAPI CRUD for listings and leads, with layered code (routes, services, repositories)
 - [ ] Input validation on every endpoint (types, lengths, allowed values)
 - [ ] Only parameterized queries, no string-built SQL

@@ -41,6 +41,10 @@ This journal records learning progress, security insights, architectural decisio
 - Added `tests/test_schema.py` to verify table existence and constraint enforcement (e.g., rejecting invalid roles and negative prices).
 - Ran tests successfully: `4 passed in 0.12s`.
 
+### Task: Synthetic Listings Generator
+- Created `data/generate_listings.py`.
+- Generates 100 fictional listings in Morocco with randomized titles, prices (in MAD), and city/neighborhood metadata.
+- Uses `executemany` with parameterized queries to insert data efficiently.
+- Verified: Ran the script and confirmed 100 rows inserted into the `listings` table.
 ---
-
 *Last updated: 2026-11-20*
