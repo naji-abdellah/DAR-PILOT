@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from backend.app import app  # noqa: E402
 from backend.database import DB_PATH, init_db  # noqa: E402
 
-TABLES = ("visits", "leads", "listings", "audit_log", "users")
+TABLES = ("visits", "leads", "listings", "audit_log", "users", "rag_chunks")
 
 
 @pytest.fixture(autouse=True)

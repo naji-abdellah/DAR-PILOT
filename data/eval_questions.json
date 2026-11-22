@@ -1,0 +1,172 @@
+[
+  {
+    "question": "villa with pool in Marrakech",
+    "expected_id": 2,
+    "lang": "en"
+  },
+  {
+    "question": "sea view apartment in Anfa Casablanca",
+    "expected_id": 5,
+    "lang": "en"
+  },
+  {
+    "question": "compact studio Marrakech",
+    "expected_id": 3,
+    "lang": "en"
+  },
+  {
+    "question": "traditional riad central patio Medina",
+    "expected_id": 4,
+    "lang": "en"
+  },
+  {
+    "question": "luxury villa Hivernage Marrakech",
+    "expected_id": 6,
+    "lang": "en"
+  },
+  {
+    "question": "renovated apartment Gauthier Casablanca",
+    "expected_id": 7,
+    "lang": "en"
+  },
+  {
+    "question": "modern studio Sidi Maarouf Casablanca business",
+    "expected_id": 8,
+    "lang": "en"
+  },
+  {
+    "question": "family villa four bedrooms Gueliz Marrakech",
+    "expected_id": 9,
+    "lang": "en"
+  },
+  {
+    "question": "luxury penthouse terrace Casablanca Marina",
+    "expected_id": 10,
+    "lang": "en"
+  },
+  {
+    "question": "historic riad Kasbah Marrakech",
+    "expected_id": 11,
+    "lang": "en"
+  },
+  {
+    "question": "quiet apartment Agdal Rabat",
+    "expected_id": 12,
+    "lang": "en"
+  },
+  {
+    "question": "modern apartment with sea view Maarif",
+    "expected_id": 1,
+    "lang": "en"
+  },
+  {
+    "question": "villa with garden and pool Palmeraie",
+    "expected_id": 2,
+    "lang": "en"
+  },
+  {
+    "question": "studio near shops Gueliz",
+    "expected_id": 3,
+    "lang": "en"
+  },
+  {
+    "question": "traditional riad with patio",
+    "expected_id": 4,
+    "lang": "en"
+  },
+  {
+    "question": "ocean view apartment Anfa",
+    "expected_id": 5,
+    "lang": "en"
+  },
+  {
+    "question": "high end villa near palace Hivernage",
+    "expected_id": 6,
+    "lang": "en"
+  },
+  {
+    "question": "renovated three bedroom Gauthier",
+    "expected_id": 7,
+    "lang": "en"
+  },
+  {
+    "question": "penthouse with terrace Marina Casablanca",
+    "expected_id": 10,
+    "lang": "en"
+  },
+  {
+    "question": "villa avec piscine Palmeraie Marrakech",
+    "expected_id": 2,
+    "lang": "fr"
+  },
+  {
+    "question": "studio compact Gueliz Marrakech",
+    "expected_id": 3,
+    "lang": "fr"
+  },
+  {
+    "question": "riad traditionnel patio Medina",
+    "expected_id": 4,
+    "lang": "fr"
+  },
+  {
+    "question": "appartement vue ocean Anfa Casablanca",
+    "expected_id": 5,
+    "lang": "fr"
+  },
+  {
+    "question": "villa de luxe Hivernage Marrakech",
+    "expected_id": 6,
+    "lang": "fr"
+  },
+  {
+    "question": "xqzpl qwer unrelated nonsense",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "buy a car in paris",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "weather forecast tomorrow",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "qwerty uiop asdfgh jklm",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "pizza restaurant delivery",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "university enrollment Morocco",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "flight ticket to london",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "smartphone latest model",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "hotel booking Agadir",
+    "expected_id": null,
+    "lang": "en"
+  },
+  {
+    "question": "xyz foo bar baz qux",
+    "expected_id": null,
+    "lang": "en"
+  }
+]

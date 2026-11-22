@@ -29,6 +29,8 @@ from slowapi.util import get_remote_address
 
 from backend import auth
 from backend import services
+from ai import rag
+from ai.llm import get_llm_client
 
 router = APIRouter()
 
@@ -135,6 +137,87 @@ def get_listing(listing_id: int):
     if listing is None:
         raise HTTPException(status_code=404, detail="Listing not found")
     return listing
+
+
+@router.get("/search", response_model=List[dict])
+def search_listings(
+    q: str = Query(..., min_length=1, max_length=200),
+    top_k: int = Query(5, ge=1, le=20),
+):
+    """Semantic search over listings via RAG.
+
+    Returns the top-k most similar chunks with their cosine-similarity score
+    and listing metadata, suitable for citation.
+    """
+    return rag.search(q, top_k=top_k)
+
+
+RAG_THRESHOLD = float(os.environ.get("DARPILOT_RAG_THRESHOLD", "0.60"))
+
+
+class AskRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+
+
+@router.post("/ask", response_model=dict)
+def ask(payload: AskRequest):
+    """Answer a question in French or English using RAG over listings.
+
+    Retrieves the top-k relevant chunks, builds a cited answer, and refuses
+    when nothing relevant is found. Returns the answer plus the listing IDs
+    used as sources.
+    """
+    question = payload.question.strip()
+    results = rag.search(question, top_k=5)
+    relevant = [r for r in results if r["score"] >= RAG_THRESHOLD]
+
+    if not relevant:
+        return {
+            "answer": ("Je n'ai trouv aucune annonce correspondant votre recherche."
+                       if _looks_french(question)
+                       else "I couldn't find any listings matching your search."),
+            "sources": [],
+            "refused": True,
+        }
+
+    client = get_llm_client()
+    context_lines = "\n".join(
+        f"- [id: {r['listing_id']}] {r['title']} ({r['city']}, {r['neighborhood']}) "
+        f"{r['price_mad']} MAD, {r['property_type']}, {r['status']}. {r['chunk_text']}"
+        for r in relevant
+    )
+    lang = "French" if _looks_french(question) else "English"
+    prompt = (
+        "You are a helpful real-estate assistant for a fictional Moroccan agency.\n"
+        "Answer the question in the same language as the question (French or English).\n"
+        "Use ONLY the provided listings. Cite each listing you mention as [id: N].\n"
+        "Do not invent listings or prices.\n\n"
+        f"Listings:\n{context_lines}\n\n"
+        f"Question: {question}\n"
+        "Answer:"
+    )
+    try:
+        answer = client.generate(prompt)
+    except Exception:
+        # Graceful degradation: live provider unavailable (bad key, rate limit,
+        # network). Fall back to the offline fake client so the demo keeps
+        # working. M4 adds proper retry/backoff + OpenRouter fallback.
+        from ai.llm import FakeLLMClient
+
+        answer = FakeLLMClient().generate(prompt)
+
+    return {
+        "answer": answer,
+        "sources": [{"id": r["listing_id"], "title": r["title"], "score": round(r["score"], 3)}
+                    for r in relevant],
+        "refused": False,
+    }
+
+
+def _looks_french(text: str) -> bool:
+    markers = ("louer", "vente", "appartement", "villa", "studio", "riad",
+               "marrakech", "casablanca", "cher", "bonjour", "prix")
+    return any(m in text.lower() for m in markers)
 
 
 @router.post("/listings", response_model=dict, status_code=201)

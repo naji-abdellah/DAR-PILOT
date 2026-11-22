@@ -63,3 +63,15 @@ CREATE INDEX IF NOT EXISTS idx_visits_lead_id ON visits(lead_id);
 CREATE INDEX IF NOT EXISTS idx_visits_listing_id ON visits(listing_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+
+-- RAG vector store: chunks of listing text + embeddings (float32 BLOB).
+CREATE TABLE IF NOT EXISTS rag_chunks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    listing_id  INTEGER    NOT NULL,
+    chunk_index INTEGER    NOT NULL,
+    chunk_text  TEXT       NOT NULL,
+    embedding   BLOB       NOT NULL,
+    created_at  TEXT       NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (listing_id) REFERENCES listings(id)
+);
+CREATE INDEX IF NOT EXISTS idx_rag_chunks_listing_id ON rag_chunks(listing_id);

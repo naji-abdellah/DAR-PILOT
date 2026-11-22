@@ -49,12 +49,12 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 
 ## M3: RAG over listings
 **Demo:** ask a question in French or English and get an answer with cited listings.
-- [ ] Chunk and embed listings on CPU
-- [ ] Retrieval endpoint returning top-k listings with scores
-- [ ] Answer generation that cites listing IDs and refuses when nothing relevant is found
-- [ ] **Evaluation set** of 30 questions with expected listings, plus a script that reports hit rate
-- [ ] Record results for at least two chunk sizes in `docs/eval.md`
-- **Break it:** put an instruction inside a listing description ("ignore previous instructions...") and see what the assistant does. Keep this case for M5.
+- [x] Chunk and embed listings on CPU
+- [x] Retrieval endpoint returning top-k listings with scores
+- [x] Answer generation that cites listing IDs and refuses when nothing relevant
+- [x] **Evaluation set** of 30 questions with expected listings, plus a script that reports hit rate
+- [x] Record results for at least two chunk sizes in `docs/eval.md`
+- [x] **Break it:** put an instruction inside a listing description ("ignore previous instructions...") and see what the assistant does. Keep this case for M5.
 
 ## M4: Agent and guardrails
 **Demo:** the assistant searches listings, creates a lead, and proposes a visit, with limits.
@@ -96,5 +96,8 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 
 ## Open decisions
 - [ ] SQLite only, or move to PostgreSQL/Supabase for row-level security? (decide at M2)
-- [ ] Chroma or SQLite for vectors? (decide at M3)
+- [x] Chroma or SQLite for vectors? (decided at M3: SQLite — lighter on 8 GB RAM/no GPU, one DB, cosine similarity in Python)
 - [ ] Which offer or goal this project targets (affects what to polish)
+
+## Decisions log
+- 2026-11-22: M3 vector store = SQLite (not Chroma). Lighter on 8 GB RAM/no GPU, no extra server process, keeps everything in one DB, cosine similarity computed in Python over fetched vectors. fastembed on CPU for embeddings.
