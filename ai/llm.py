@@ -137,7 +137,11 @@ class BaseLiveLLMClient(LLMClient):
 # ── Gemini client (real API) ───────────────────────────────────────────────
 
 class GeminiLLMClient(BaseLiveLLMClient):
-    """Calls the Gemini 1.5 Flash REST API (free tier)."""
+    """Calls the Gemini 1.5 Flash REST API (free tier).
+
+    Uses ``x-goog-api-key`` header instead of query parameter to avoid
+    leaking the API key in logs/URLs.
+    """
 
     def __init__(
         self,
@@ -149,7 +153,7 @@ class GeminiLLMClient(BaseLiveLLMClient):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
         self.url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}"
-            f":generateContent?key={self.api_key}"
+            f":generateContent"
         )
 
     def generate(self, prompt: str) -> str:
@@ -157,8 +161,12 @@ class GeminiLLMClient(BaseLiveLLMClient):
             raise RuntimeError("GEMINI_API_KEY is not set")
 
         def _call():
+            headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key,
+            }
             payload = {"contents": [{"parts": [{"text": prompt}]}]}
-            resp = requests.post(self.url, json=payload, timeout=self.timeout)
+            resp = requests.post(self.url, json=payload, headers=headers, timeout=self.timeout)
             if resp.status_code in self.RETRY_STATUS_CODES:
                 raise RuntimeError(f"Gemini rate limited ({resp.status_code})")
             resp.raise_for_status()

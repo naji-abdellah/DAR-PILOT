@@ -88,6 +88,54 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 
 ---
 
+## M7: Fix critical vulnerabilities (security fixes with failing tests first)
+**Demo:** all auth/IDOR/ownership bugs fixed, `/security/*` authenticated, rate limits on LLM endpoints, Gemini key in header.
+- [ ] **M7.1** Fix admin self-registration: force `viewer` role on self-registration; add admin creation via separate mechanism. Write failing test first.
+- [ ] **M7.2** Fix IDOR on leads: routes must use `get_lead_for_user` and `get_leads_for_listing_for_user`. Write failing test "agent cannot read another agent's leads".
+- [ ] **M7.3** Fix visit ownership: visits scoped to agent; agents can only create/read their own visits; viewers cannot create visits. Write failing tests.
+- [ ] **M7.4** Fix listing creation: agent cannot set `agent_id` to another user. Write failing test.
+- [ ] **M7.5** Protect `/security/*` endpoints: require authentication + rate limiting. Write failing tests.
+- [ ] **M7.6** Add rate limiting to `/ask` and `/search` (LLM-cost endpoints). Write failing test.
+- [ ] **M7.7** Fix Gemini API key: use `x-goog-api-key` header instead of URL param. Update `ResilientLLMClient`.
+- [ ] **M7.8** Fix indirect injection defenses: `/ask` must call `validate_input` and `redact_pii`; prompt built with safe templating (no plain concatenation); `conversation_history` sanitized and `MAX_HISTORY_LENGTH` enforced.
+- [ ] **M7.9** Enable SQLite foreign keys (`PRAGMA foreign_keys=ON`).
+
+## M8: Fix repo, CI, and environment issues
+**Demo:** `pip install -r requirements.txt` works; CI runs from repo root; `.env.example` works out of the box.
+- [ ] **M8.1** Fix `requirements.txt`: add `PyJWT`, `scikit-learn`, `email-validator`; remove unused `python-jose`, `passlib`.
+- [ ] **M8.2** Fix CI paths: run from repo root, not `./backend`.
+- [ ] **M8.3** Fix `.env.example`: point to project DB path, set `DARPILOT_CORS_ORIGINS` to `http://localhost:3000`.
+- [ ] **M8.4** Fix Bandit/Semgrep CI: remove `|| true` / `continue-on-error` so findings fail the build.
+- [ ] **M8.5** Add frontend login form and assistant chat UI (main feature).
+
+## M9: Honest red-team suite
+**Demo:** held-out test set, stored-listing payloads, run against real model, documented baseline.
+- [ ] **M9.1** Rewrite adversarial tests: payloads delivered via stored listing text (RAG path), not direct user input.
+- [ ] **M9.2** Create held-out test set (unseen by developer) for honest evaluation.
+- [ ] **M9.3** Run suite against real LLM (Gemini/OpenRouter) and document results.
+- [ ] **M9.4** Fix `safe_response` evaluator: actually evaluate response safety, not always return True.
+- [ ] **M9.5** Make baseline reproducible: script that runs against FakeLLMClient without guardrails.
+
+## M10: Correct documentation to match code
+**Demo:** every claim in docs is verifiable in code.
+- [ ] **M10.1** Update `docs/security-report.md`: remove "100% defense" claim, document actual test methodology and limitations.
+- [ ] **M10.2** Update `docs/compliance.md`: verify Law 09-08 article numbers; use ISO 27001:2022 numbering consistently.
+- [ ] **M10.3** Fix `docs/threat-model.md`: remove claims about HttpOnly cookies, HSTS, WAL mode, `/agent/chat`, `/admin/users`.
+- [ ] **M10.4** Fix `docs/risk-register.md`: treatment counts must match list.
+- [ ] **M10.5** Fix `docs/eval.md`: consistent counts.
+- [ ] **M10.6** Update README: remove 🚧, add real screenshots or remove placeholder references.
+- [ ] **M10.7** Fix audit log claims: document actual behavior (stores args, truncates to 100 chars, includes PII).
+
+## M11: Fix remaining agent/guardrail gaps
+**Demo:** approval flow works; n8n error workflow triggered automatically; conversation history bounded.
+- [ ] **M11.1** Implement `book_visit` approval flow: return `approval_id`, add `/admin/approvals/{id}/approve` endpoint.
+- [ ] **M11.2** Wire `ResilientLLMClient` to call `alert_ai_service_error` on failures.
+- [ ] **M11.3** Fix n8n alert counters: add reset logic (time-window based).
+- [ ] **M11.4** Enforce `MAX_HISTORY_LENGTH` in agent conversation history.
+- [ ] **M11.5** Sanitize tool results and listing text before including in prompt (prevent role marker forgery).
+
+---
+
 ## Rules for AI sessions
 - Start each session with: "Read CONTEXT.md and PLAN.md, then do only task X."
 - After each task: run tests, review the diff for security issues, commit.

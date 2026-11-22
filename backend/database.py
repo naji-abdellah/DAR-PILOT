@@ -24,6 +24,7 @@ def get_connection():
     """Yield an open SQLite connection, closing it when done."""
     conn = sqlite3.connect(str(_get_db_path()))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
     try:
         yield conn
     finally:

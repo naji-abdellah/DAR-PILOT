@@ -9,6 +9,7 @@ import sqlite3
 import tempfile
 
 os.environ["DARPILOT_DB_PATH"] = tempfile.mkstemp(suffix=".db")[1]
+os.environ["DARPILOT_SECRET_KEY"] = "test-secret-do-not-use-in-production"
 
 import pytest  # noqa: E402
 

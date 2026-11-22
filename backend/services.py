@@ -137,8 +137,14 @@ def create_listing(
     property_type: str,
     status: str = "available",
     agent_id: Optional[int] = None,
+    current_user: Optional[dict] = None,
 ) -> Dict[str, Any]:
-    """Create a listing after validating all inputs."""
+    """Create a listing after validating all inputs.
+
+    If ``current_user`` is provided and has role "agent", the ``agent_id`` is
+    forced to the current user's ID (agents cannot create listings for other agents).
+    Admins can specify any ``agent_id``.
+    """
     title = _validate_required_string(title, "title", MAX_TITLE_LEN)
     description = _validate_optional_string(description, "description", MAX_DESCRIPTION_LEN) or ""
     price_mad = _validate_price(price_mad)
@@ -147,10 +153,23 @@ def create_listing(
     property_type = _validate_property_type(property_type)
     if status not in repositories.VALID_LISTING_STATUSES:
         raise ValueError(f"Invalid status: {status!r}. Must be one of: {repositories.VALID_LISTING_STATUSES}")
-    if agent_id is not None and not isinstance(agent_id, int):
+    
+    # Determine the actual agent_id based on role
+    if current_user is not None and current_user.get("role") == "agent":
+        # Agents can only create listings for themselves
+        actual_agent_id = current_user["id"]
+    elif current_user is not None and current_user.get("role") == "admin":
+        # Admins can specify any agent_id
+        actual_agent_id = agent_id
+    else:
+        # Fallback (should not happen with proper auth)
+        actual_agent_id = agent_id
+    
+    if actual_agent_id is not None and not isinstance(actual_agent_id, int):
         raise TypeError("agent_id must be an integer or None")
+    
     listing_id = repositories.create_listing(
-        title, description, price_mad, city, neighborhood, property_type, status, agent_id
+        title, description, price_mad, city, neighborhood, property_type, status, actual_agent_id
     )
     return {
         "id": listing_id,
@@ -161,7 +180,7 @@ def create_listing(
         "neighborhood": neighborhood,
         "property_type": property_type,
         "status": status,
-        "agent_id": agent_id,
+        "agent_id": actual_agent_id,
     }
 
 
@@ -276,19 +295,33 @@ def create_visit(
     scheduled_at: str,
     status: str = "scheduled",
     notes: Optional[str] = None,
+    agent_id: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Create a visit record after validating inputs."""
+    """Create a visit record after validating inputs.
+
+    If ``agent_id`` is provided, verifies the agent owns the listing.
+    """
     if not isinstance(lead_id, int):
         raise TypeError("lead_id must be an integer")
     if not isinstance(listing_id, int):
         raise TypeError("listing_id must be an integer")
     scheduled_at = _validate_required_string(scheduled_at, "scheduled_at", 50)
-    # Basic ISO-like date check (lenient for simplicity)
     if len(scheduled_at) < 10:
         raise ValueError("scheduled_at must be a valid datetime string (e.g., 2026-01-15T10:00:00)")
     if status not in repositories.VALID_VISIT_STATUSES:
         raise ValueError(f"Invalid visit status: {status!r}. Must be one of: {repositories.VALID_VISIT_STATUSES}")
     notes = _validate_optional_string(notes, "notes", MAX_NOTES_LEN) or ""
+
+    # Verify listing exists and get its agent
+    listing = repositories.get_listing_by_id(listing_id)
+    if listing is None:
+        raise ValueError("Listing not found")
+    
+    # If agent_id provided, verify they own the listing
+    if agent_id is not None:
+        if listing.get("agent_id") != agent_id:
+            raise ValueError("Agent does not own this listing")
+
     visit_id = repositories.create_visit(lead_id, listing_id, scheduled_at, status, notes)
     return {
         "id": visit_id,
@@ -305,6 +338,28 @@ def get_visit_by_id(visit_id: int) -> Optional[Dict[str, Any]]:
     if not isinstance(visit_id, int):
         raise TypeError("visit_id must be an integer")
     return repositories.get_visit_by_id(visit_id)
+
+
+def get_visit_for_user(visit_id: int, current_user: dict) -> Optional[Dict[str, Any]]:
+    """Fetch a visit if the user may see it: admin, or the agent who owns its listing.
+
+    Returns ``None`` when the visit does not exist or the agent is not the listing
+    owner. Using ``None`` (404) rather than 403 for cross-agent access avoids
+    confirming that the visit exists (IDOR mitigation).
+    """
+    if not isinstance(visit_id, int):
+        raise TypeError("visit_id must be an integer")
+    visit = repositories.get_visit_by_id(visit_id)
+    if visit is None:
+        return None
+    if current_user.get("role") == "admin":
+        return visit
+    listing_id = visit.get("listing_id")
+    if listing_id is not None:
+        listing = repositories.get_listing_by_id(listing_id)
+        if listing and listing.get("agent_id") == current_user.get("id"):
+            return visit
+    return None
 
 
 def log_action(

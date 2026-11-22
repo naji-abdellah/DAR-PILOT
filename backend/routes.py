@@ -20,6 +20,7 @@ Roles are enforced server-side via ``require_role``.
 from __future__ import annotations
 
 import os
+import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -31,12 +32,16 @@ from backend import auth
 from backend import services
 from ai import rag
 from ai.llm import get_llm_client
+from ai.agent import validate_input, redact_pii, MAX_INPUT_LENGTH, MAX_HISTORY_LENGTH
 
 router = APIRouter()
 
-# Rate limiter keyed by client IP. Wired to the app in backend/app.py.
-# Login rate limit is configurable via DARPILOT_LOGIN_RATE_LIMIT (default 5/minute).
+# Rate limiters
 LOGIN_RATE_LIMIT = os.environ.get("DARPILOT_LOGIN_RATE_LIMIT", "5/minute")
+SEARCH_RATE_LIMIT = os.environ.get("DARPILOT_SEARCH_RATE_LIMIT", "30/minute")
+ASK_RATE_LIMIT = os.environ.get("DARPILOT_ASK_RATE_LIMIT", "20/minute")
+SECURITY_RATE_LIMIT = os.environ.get("DARPILOT_SECURITY_RATE_LIMIT", "10/minute")
+
 limiter = Limiter(key_func=get_remote_address)
 
 
@@ -86,18 +91,36 @@ class VisitCreate(BaseModel):
     status: str = Field("scheduled", pattern="^(scheduled|completed|cancelled)$")
     notes: Optional[str] = Field(None, max_length=1000)
 
+
+class BlockedPromptAlert(BaseModel):
+    user_id: Optional[int] = None
+    attack_type: str
+    payload: str
+    ip: Optional[str] = None
+
+
+class AIErrorAlert(BaseModel):
+    endpoint: str
+    error: str
+
+
 # ── Auth endpoints ────────────────────────────────────────────────────
 
 
 @router.post("/auth/register", response_model=dict, status_code=201)
 def register(payload: UserRegister):
-    """Create a new user account. Password is hashed server-side."""
+    """Create a new user account. Password is hashed server-side.
+
+    Self-registration is forced to 'viewer' role. Admin/agent accounts
+    must be created by an existing admin via a separate mechanism.
+    """
     try:
+        # Force viewer role for self-registration (security: prevent privilege escalation)
         return services.register_user_account(
             username=payload.username,
             email=payload.email,
             password=payload.password,
-            role=payload.role,
+            role="viewer",  # Always force viewer for self-registration
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -143,7 +166,9 @@ def get_listing(listing_id: int):
 
 
 @router.get("/search", response_model=List[dict])
+@limiter.limit(SEARCH_RATE_LIMIT)
 def search_listings(
+    request: Request,
     q: str = Query(..., min_length=1, max_length=200),
     top_k: int = Query(5, ge=1, le=20),
 ):
@@ -163,14 +188,28 @@ class AskRequest(BaseModel):
 
 
 @router.post("/ask", response_model=dict)
-def ask(payload: AskRequest):
+@limiter.limit(ASK_RATE_LIMIT)
+def ask(request: Request, payload: AskRequest):
     """Answer a question in French or English using RAG over listings.
 
     Retrieves the top-k relevant chunks, builds a cited answer, and refuses
     when nothing relevant is found. Returns the answer plus the listing IDs
     used as sources.
+
+    Input is validated for length and prompt injection, and PII is redacted
+    before sending to the LLM. Listing text is sanitized to prevent
+    role-marker forgery.
     """
     question = payload.question.strip()
+
+    # Validate input length and check for injection
+    validation_error = validate_input(question)
+    if validation_error:
+        raise HTTPException(status_code=400, detail=validation_error)
+
+    # Redact PII from question
+    question = redact_pii(question)
+
     results = rag.search(question, top_k=5)
     relevant = [r for r in results if r["score"] >= RAG_THRESHOLD]
 
@@ -184,9 +223,21 @@ def ask(payload: AskRequest):
         }
 
     client = get_llm_client()
+    
+    # Sanitize listing chunk text to prevent role-marker forgery
+    def sanitize_chunk(text: str) -> str:
+        """Remove potential role markers and control sequences from listing text."""
+        # Remove SYSTEM/USER/ASSISTANT role markers
+        text = re.sub(r"^\s*(SYSTEM|USER|ASSISTANT|Human|Assistant)\s*:\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
+        # Remove angle-bracket role markers
+        text = re.sub(r"<\s*(?:system|user|assistant|human)\s*>", "", text, flags=re.IGNORECASE)
+        # Remove markdown code fences that could hide instructions
+        text = re.sub(r"```[\s\S]*?```", "", text)
+        return text.strip()
+
     context_lines = "\n".join(
         f"- [id: {r['listing_id']}] {r['title']} ({r['city']}, {r['neighborhood']}) "
-        f"{r['price_mad']} MAD, {r['property_type']}, {r['status']}. {r['chunk_text']}"
+        f"{r['price_mad']} MAD, {r['property_type']}, {r['status']}. {sanitize_chunk(r['chunk_text'])}"
         for r in relevant
     )
     lang = "French" if _looks_french(question) else "English"
@@ -228,7 +279,11 @@ def create_listing(
     payload: ListingCreate,
     current_user: dict = Depends(auth.require_role("agent", "admin")),
 ):
-    """Create a listing. Requires agent or admin role."""
+    """Create a listing. Requires agent or admin role.
+
+    Agents can only create listings for themselves (agent_id forced to their ID).
+    Admins can specify any agent_id.
+    """
     try:
         return services.create_listing(
             title=payload.title,
@@ -238,7 +293,8 @@ def create_listing(
             neighborhood=payload.neighborhood,
             property_type=payload.property_type,
             status=payload.status,
-            agent_id=current_user["id"] if payload.agent_id is None else payload.agent_id,
+            agent_id=payload.agent_id,
+            current_user=current_user,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -264,10 +320,14 @@ def get_lead(
     lead_id: int,
     current_user: dict = Depends(auth.require_role("agent", "admin")),
 ):
-    """Fetch a single lead by ID. Requires agent or admin role."""
+    """Fetch a single lead by ID. Requires agent or admin role.
+
+    Agents can only access leads for their own listings. Admins can access all.
+    Returns 404 for unauthorized access (IDOR mitigation).
+    """
     if lead_id <= 0:
         raise HTTPException(status_code=400, detail="lead_id must be positive")
-    lead = services.get_lead_by_id(lead_id)
+    lead = services.get_lead_for_user(lead_id, current_user)
     if lead is None:
         raise HTTPException(status_code=404, detail="Lead not found")
     return lead
@@ -278,17 +338,24 @@ def list_leads_for_listing(
     listing_id: int,
     current_user: dict = Depends(auth.require_role("agent", "admin")),
 ):
-    """Return all leads for a given listing. Requires agent or admin role."""
+    """Return all leads for a given listing. Requires agent or admin role.
+
+    Agents can only access leads for their own listings. Admins can access all.
+    Returns empty list for unauthorized access (IDOR mitigation).
+    """
     if listing_id <= 0:
         raise HTTPException(status_code=400, detail="listing_id must be positive")
-    return services.get_leads_by_listing(listing_id)
+    return services.get_leads_for_listing_for_user(listing_id, current_user)
 
 @router.post("/visits", response_model=dict, status_code=201)
 def create_visit(
     payload: VisitCreate,
-    current_user: dict = Depends(auth.get_current_user),
+    current_user: dict = Depends(auth.require_role("agent", "admin")),
 ):
-    """Schedule a visit. Requires authentication."""
+    """Schedule a visit. Requires agent or admin role.
+
+    Agents can only create visits for their own listings.
+    """
     try:
         return services.create_visit(
             lead_id=payload.lead_id,
@@ -296,20 +363,25 @@ def create_visit(
             scheduled_at=payload.scheduled_at,
             status=payload.status,
             notes=payload.notes,
+            agent_id=current_user["id"] if current_user.get("role") == "agent" else None,
         )
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=403 if "Agent does not own" in str(e) else 422, detail=str(e))
 
 
 @router.get("/visits/{visit_id}", response_model=dict)
 def get_visit(
     visit_id: int,
-    current_user: dict = Depends(auth.get_current_user),
+    current_user: dict = Depends(auth.require_role("agent", "admin")),
 ):
-    """Fetch a single visit by ID. Requires authentication."""
+    """Fetch a single visit by ID. Requires agent or admin role.
+
+    Agents can only access visits for their own listings. Admins can access all.
+    Returns 404 for unauthorized access (IDOR mitigation).
+    """
     if visit_id <= 0:
         raise HTTPException(status_code=400, detail="visit_id must be positive")
-    visit = services.get_visit_by_id(visit_id)
+    visit = services.get_visit_for_user(visit_id, current_user)
     if visit is None:
         raise HTTPException(status_code=404, detail="Visit not found")
     return visit
@@ -323,28 +395,36 @@ def health():
 
 # ── Security Alert Endpoints (for n8n integration) ──────────────────────
 
-class BlockedPromptAlert(BaseModel):
-    user_id: Optional[int] = None
-    attack_type: str
-    payload: str
-    ip: Optional[str] = None
+# Rate limiter for security endpoints (stricter than login)
+SECURITY_RATE_LIMIT = os.environ.get("DARPILOT_SECURITY_RATE_LIMIT", "10/minute")
 
 
 @router.post("/security/blocked-prompt", response_model=dict)
-def report_blocked_prompt(alert: BlockedPromptAlert, request: Request):
-    """Receive blocked prompt report from agent and forward to n8n."""
+@limiter.limit(SECURITY_RATE_LIMIT)
+def report_blocked_prompt(
+    request: Request,
+    alert: BlockedPromptAlert,
+    current_user: dict = Depends(auth.get_current_user),
+):
+    """Receive blocked prompt report from agent and forward to n8n.
+
+    Requires authentication and rate limiting.
+    """
     client_ip = alert.ip or (request.client.host if request.client else None)
     services.alert_blocked_prompt(alert.user_id, alert.attack_type, alert.payload, client_ip)
     return {"success": True, "message": "Alert forwarded to monitoring"}
 
 
-class AIErrorAlert(BaseModel):
-    endpoint: str
-    error: str
-
-
 @router.post("/security/ai-error", response_model=dict)
-def report_ai_error(alert: AIErrorAlert):
-    """Receive AI service error and forward to n8n error workflow."""
+@limiter.limit(SECURITY_RATE_LIMIT)
+def report_ai_error(
+    request: Request,
+    alert: AIErrorAlert,
+    current_user: dict = Depends(auth.get_current_user),
+):
+    """Receive AI service error and forward to n8n error workflow.
+
+    Requires authentication and rate limiting.
+    """
     services.alert_ai_service_error(alert.endpoint, alert.error)
     return {"success": True, "message": "Error alert forwarded to monitoring"}
