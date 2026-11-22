@@ -28,7 +28,7 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 # ── Password hashing ─────────────────────────────────────────────────────
@@ -71,6 +71,12 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """Return the authenticated user dict, or raise 401/403."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     try:
         payload = decode_token(token)

@@ -90,19 +90,19 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 
 ## M7: Fix critical vulnerabilities (security fixes with failing tests first)
 **Demo:** all auth/IDOR/ownership bugs fixed, `/security/*` authenticated, rate limits on LLM endpoints, Gemini key in header.
-- [ ] **M7.1** Fix admin self-registration: force `viewer` role on self-registration; add admin creation via separate mechanism. Write failing test first.
-- [ ] **M7.2** Fix IDOR on leads: routes must use `get_lead_for_user` and `get_leads_for_listing_for_user`. Write failing test "agent cannot read another agent's leads".
-- [ ] **M7.3** Fix visit ownership: visits scoped to agent; agents can only create/read their own visits; viewers cannot create visits. Write failing tests.
-- [ ] **M7.4** Fix listing creation: agent cannot set `agent_id` to another user. Write failing test.
-- [ ] **M7.5** Protect `/security/*` endpoints: require authentication + rate limiting. Write failing tests.
-- [ ] **M7.6** Add rate limiting to `/ask` and `/search` (LLM-cost endpoints). Write failing test.
-- [ ] **M7.7** Fix Gemini API key: use `x-goog-api-key` header instead of URL param. Update `ResilientLLMClient`.
-- [ ] **M7.8** Fix indirect injection defenses: `/ask` must call `validate_input` and `redact_pii`; prompt built with safe templating (no plain concatenation); `conversation_history` sanitized and `MAX_HISTORY_LENGTH` enforced.
-- [ ] **M7.9** Enable SQLite foreign keys (`PRAGMA foreign_keys=ON`).
+- [x] **M7.1** Fix admin self-registration: force `viewer` role on self-registration; add admin creation via separate mechanism. Write failing test first.
+- [x] **M7.2** Fix IDOR on leads: routes must use `get_lead_for_user` and `get_leads_for_listing_for_user`. Write failing test "agent cannot read another agent's leads".
+- [x] **M7.3** Fix visit ownership: visits scoped to agent; agents can only create/read their own visits; viewers cannot create visits. Write failing tests.
+- [x] **M7.4** Fix listing creation: agent cannot set `agent_id` to another user. Write failing test.
+- [x] **M7.5** Protect `/security/*` endpoints: require authentication + rate limiting. Write failing tests.
+- [x] **M7.6** Add rate limiting to `/ask` and `/search` (LLM-cost endpoints). Write failing test.
+- [x] **M7.7** Fix Gemini API key: use `x-goog-api-key` header instead of URL param. Update `ResilientLLMClient`.
+- [x] **M7.8** Fix indirect injection defenses: `/ask` must call `validate_input` and `redact_pii`; prompt built with safe templating (no plain concatenation); `conversation_history` sanitized and `MAX_HISTORY_LENGTH` enforced.
+- [x] **M7.9** Enable SQLite foreign keys (`PRAGMA foreign_keys=ON`).
 
 ## M8: Fix repo, CI, and environment issues
 **Demo:** `pip install -r requirements.txt` works; CI runs from repo root; `.env.example` works out of the box.
-- [ ] **M8.1** Fix `requirements.txt`: add `PyJWT`, `scikit-learn`, `email-validator`; remove unused `python-jose`, `passlib`.
+- [x] **M8.1** Fix `requirements.txt`: add `PyJWT`, `scikit-learn`, `email-validator`; remove unused `python-jose`, `passlib`.
 - [ ] **M8.2** Fix CI paths: run from repo root, not `./backend`.
 - [ ] **M8.3** Fix `.env.example`: point to project DB path, set `DARPILOT_CORS_ORIGINS` to `http://localhost:3000`.
 - [ ] **M8.4** Fix Bandit/Semgrep CI: remove `|| true` / `continue-on-error` so findings fail the build.
