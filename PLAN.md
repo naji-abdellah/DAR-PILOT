@@ -45,7 +45,7 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 - [x] Next.js pages: listings, listing detail, lead form, agent dashboard
 - [x] Security headers, strict CORS, rate limiting on login
 - [x] **Authorization tests**: a viewer cannot read leads, an agent cannot read another agent's leads, an unauthenticated user gets 401
-- **Break it:** remove a permission check and confirm the tests fail. Optional: repeat this with PostgreSQL row-level security if you move to Supabase.
+- [x] **Break it:** remove a permission check and confirm the tests fail. Optional: repeat this with PostgreSQL row-level security if you move to Supabase.
 
 ## M3: RAG over listings
 **Demo:** ask a question in French or English and get an answer with cited listings.
