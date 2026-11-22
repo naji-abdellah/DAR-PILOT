@@ -71,3 +71,16 @@ This journal records learning progress, security insights, architectural decisio
 - Added `tests/test_api.py` authorization cases: unauth → 401, viewer → 403 on create-listing and read-leads, agent/admin → 201 on create-listing, invalid/expired tokens → 401. SQL-injection path tests confirm 422/401, never execution.
 - Ran tests: `29 passed`.
 - Next: frontend Next.js pages (M2) and the "break it" permission-removal regression test.
+
+### Task: Next.js frontend pages
+- Scaffolded Next.js 16 App Router project in `frontend/` with TypeScript, Tailwind CSS v4, and ESLint.
+- `lib/api.ts`: typed API client wrapping `fetch` to the FastAPI backend (`NEXT_PUBLIC_API_URL`), with JWT token helpers (`getToken`/`setToken`/`clearToken`) using localStorage.
+- `components/Navbar.tsx`: responsive navigation with auth-aware links (login/logout, dashboard).
+- `app/page.tsx`: home page with entry points to listings, contact form, and dashboard.
+- `app/listings/page.tsx`: client component fetching and rendering all listings with status badges.
+- `app/listings/[id]/page.tsx`: server component rendering a single listing's details with a "Send a message" link.
+- `app/leads/new/page.tsx` + `form.tsx`: server page reading `searchParams` (default listing) + client form for public lead capture (POST /leads).
+- `app/dashboard/page.tsx`: auth-gated dashboard; decodes the JWT client-side to show the user's role and only their own listings (agents) or all listings (admins). No token shows a login prompt.
+- Fixed ESLint errors: `<Link>` instead of `<a>`, no setState directly in effect bodies, no unescaped HTML entities, removed unused imports.
+- Verified: `npm run build` passes (6 routes), `npm run lint` clean.
+- Smoke-tested end-to-end: backend `/listings`, `/auth/register`, `/auth/login`, agent create-listing (201), viewer create-listing (403), unauth (401).

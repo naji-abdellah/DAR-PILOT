@@ -42,7 +42,7 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 **Demo:** log in as admin, agent, or viewer and see different things.
 - [x] Authentication (hashed passwords, short-lived tokens)
 - [x] Roles: `admin`, `agent`, `viewer`, enforced on the **server**, not just the UI
-- [ ] Next.js pages: listings, listing detail, lead form, agent dashboard
+- [x] Next.js pages: listings, listing detail, lead form, agent dashboard
 - [x] Security headers, strict CORS, rate limiting on login
 - [x] **Authorization tests**: a viewer cannot read leads, an agent cannot read another agent's leads, an unauthenticated user gets 401
 - **Break it:** remove a permission check and confirm the tests fail. Optional: repeat this with PostgreSQL row-level security if you move to Supabase.
