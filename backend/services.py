@@ -7,7 +7,11 @@ enforces authorization rules. All SQL is in repositories.py — none here.
 
 from __future__ import annotations
 
+import os
+import json
 from typing import Any, Dict, List, Optional
+
+import requests
 
 from backend import auth
 from backend import repositories
@@ -319,4 +323,60 @@ def log_action(
         raise TypeError("record_id must be an integer or None")
     details = _validate_optional_string(details, "details", 2000) or ""
     return repositories.log_action(user_id, action, table_name, record_id, details)
+
+
+# ── n8n Alerting ──────────────────────────────────────────────────────────
+
+N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook")
+
+
+def _send_n8n_webhook(endpoint: str, payload: Dict[str, Any]) -> bool:
+    """Send a webhook to n8n. Returns True if successful, False otherwise."""
+    url = f"{N8N_WEBHOOK_URL}/{endpoint}"
+    try:
+        resp = requests.post(url, json=payload, timeout=5)
+        return resp.status_code == 200
+    except Exception:
+        # Never let alerting break the main flow
+        return False
+
+
+def alert_blocked_prompt(
+    user_id: Optional[int],
+    attack_type: str,
+    payload: str,
+    ip: Optional[str] = None,
+) -> bool:
+    """Send blocked prompt alert to n8n."""
+    return _send_n8n_webhook("security/blocked-prompt", {
+        "user_id": user_id,
+        "attack_type": attack_type,
+        "payload": payload[:500],  # Truncate for safety
+        "ip": ip,
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+    })
+
+
+def alert_failed_login(
+    username: str,
+    ip: Optional[str] = None,
+) -> bool:
+    """Send failed login alert to n8n."""
+    return _send_n8n_webhook("security/failed-login", {
+        "username": username,
+        "ip": ip,
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+    })
+
+
+def alert_ai_service_error(
+    endpoint: str,
+    error: str,
+) -> bool:
+    """Send AI service error alert to n8n (error workflow)."""
+    return _send_n8n_webhook("ai-service/error", {
+        "endpoint": endpoint,
+        "error": error[:500],
+        "timestamp": __import__("datetime").datetime.now().isoformat(),
+    })
 

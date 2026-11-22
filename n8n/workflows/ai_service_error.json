@@ -1,0 +1,125 @@
+{
+  "name": "DarPilot AI Service Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-service/error",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ai-error",
+      "name": "Webhook: AI Service Error",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const error = $json.error || 'Unknown error';\nconst endpoint = $json.endpoint || 'unknown';\nconst timestamp = new Date().toISOString();\n\nreturn [{ json: { error, endpoint, timestamp, alert: true } }];"
+      },
+      "id": "parse-error",
+      "name": "Parse Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@darpilot.local",
+        "toEmail": "admin@darpilot.local",
+        "subject": "🔴 DarPilot AI Service Failure",
+        "text": "The AI service has reported an error:\n\nEndpoint: {{ $json.endpoint }}\nError: {{ $json.error }}\nTimestamp: {{ $json.timestamp }}\n\nThis may indicate:\n- LLM provider outage (Gemini/OpenRouter)\n- Network connectivity issues\n- Rate limiting exceeded\n- Invalid API keys\n\nPlease check the service status and logs.",
+        "options": {}
+      },
+      "id": "send-ai-error-alert",
+      "name": "Send Email: AI Service Error",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { status: 'error_logged', timestamp: new Date().toISOString() } }];"
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "options": {
+          "respondWith": "json",
+          "responseCode": 200,
+          "responseData": {
+            "json": {
+              "success": true,
+              "message": "Error received and alert sent"
+            }
+          }
+        }
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: AI Service Error": {
+      "main": [
+        [
+          {
+            "node": "Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Error": {
+      "main": [
+        [
+          {
+            "node": "Send Email: AI Service Error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email: AI Service Error": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "2"
+}

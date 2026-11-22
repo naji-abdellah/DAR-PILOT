@@ -58,33 +58,33 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 
 ## M4: Agent and guardrails
 **Demo:** the assistant searches listings, creates a lead, and proposes a visit, with limits.
-- [ ] `LLMClient` interface with Gemini, OpenRouter, and fake implementations
-- [ ] Retry with exponential backoff on 429 and 503 errors, plus a fallback provider
-- [ ] Tools: `search_listings`, `create_lead`, `book_visit`, `escalate_to_human`
-- [ ] **Guardrails:** tool allowlist, iteration cap, validated tool arguments, human approval before booking, PII redaction before text is sent to the LLM
-- [ ] Every agent action written to `audit_log`
-- [ ] Prompt files versioned in `prompts/`
+- [x] `LLMClient` interface with Gemini, OpenRouter, and fake implementations
+- [x] Retry with exponential backoff on 429 and 503 errors, plus a fallback provider
+- [x] Tools: `search_listings`, `create_lead`, `book_visit`, `escalate_to_human`
+- [x] **Guardrails:** tool allowlist, iteration cap, validated tool arguments, human approval before booking, PII redaction before text is sent to the LLM
+- [x] Every agent action written to `audit_log`
+- [x] Prompt files versioned in `prompts/`
 - **Break it:** trigger a 429 on purpose and confirm the fallback works.
 
 ## M5: Red teaming and detection
 **Demo:** a report showing attack success rate before and after your fixes.
-- [ ] Prompt-injection test suite (at least 25 cases): direct injection, injection via listing text, system-prompt leak attempts, tool-abuse attempts, data exfiltration attempts
-- [ ] Map each case to the OWASP Top 10 for LLM Applications
-- [ ] Run the suite, record the **baseline** attack success rate, apply fixes, run again
-- [ ] Optional: try promptfoo or garak for automation (check their current docs first)
-- [ ] n8n workflow: webhook to AI service to alert, with an error workflow, firing on repeated blocked prompts or failed logins
-- [ ] Scam-listing detector: simple rules plus a scikit-learn model on synthetic data (price far below market, copied text, suspicious contact patterns)
+- [x] Prompt-injection test suite (at least 25 cases): direct injection, injection via listing text, system-prompt leak attempts, tool-abuse attempts, data exfiltration attempts
+- [x] Map each case to the OWASP Top 10 for LLM Applications
+- [x] Run the suite, record the **baseline** attack success rate, apply fixes, run again
+- [x] Optional: try promptfoo or garak for automation (check their current docs first)
+- [x] n8n workflow: webhook to AI service to alert, with an error workflow, firing on repeated blocked prompts or failed logins
+- [x] Scam-listing detector: simple rules plus a scikit-learn model on synthetic data (price far below market, copied text, suspicious contact patterns)
 - **Break it:** make the AI service fail and confirm the n8n error workflow alerts you.
 
 ## M6: CI and polish
 **Demo:** a repo a stranger can clone, run, and trust.
-- [ ] GitHub Actions on every push: `pytest`, gitleaks, Semgrep, Bandit, `pip-audit`, `npm audit`
-- [ ] Final `docs/threat-model.md` and `docs/risk-register.md` (risk, likelihood, impact, mitigation, status)
-- [ ] `docs/security-report.md`: before/after results from M5 and what is still open
-- [ ] Short compliance note mapping controls to Morocco's data-protection law (09-08, CNDP) and ISO 27001-style controls (verify details before publishing)
-- [ ] README with setup steps, architecture diagram, and screenshots
-- [ ] 2-minute demo video
-- [ ] Ask someone to follow the README from scratch and fix what confuses them
+- [x] GitHub Actions on every push: `pytest`, gitleaks, Semgrep, Bandit, `pip-audit`, `npm audit`
+- [x] Final `docs/threat-model.md` and `docs/risk-register.md` (risk, likelihood, impact, mitigation, status)
+- [x] `docs/security-report.md`: before/after results from M5 and what is still open
+- [x] Short compliance note mapping controls to Morocco's data-protection law (09-08, CNDP) and ISO 27001-style controls (verify details before publishing)
+- [x] README with setup steps, architecture diagram, and screenshots
+- [x] 2-minute demo video
+- [x] Ask someone to follow the README from scratch and fix what confuses them
 
 ---
 

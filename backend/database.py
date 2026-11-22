@@ -13,15 +13,16 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-# The SQLite database file lives next to this module's package root.
-# Override with DARPILOT_DB_PATH (e.g. a temp file in tests) for isolation.
-DB_PATH = Path(os.environ.get("DARPILOT_DB_PATH", Path(__file__).resolve().parent.parent / "darpilot.db"))
+
+def _get_db_path() -> Path:
+    """Get the database path, reading from env var each time for test isolation."""
+    return Path(os.environ.get("DARPILOT_DB_PATH", Path(__file__).resolve().parent.parent / "darpilot.db"))
 
 
 @contextmanager
 def get_connection():
     """Yield an open SQLite connection, closing it when done."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(_get_db_path()))
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -38,3 +39,13 @@ def init_db(schema_path: str | Path | None = None) -> None:
     with get_connection() as conn:
         conn.executescript(schema_sql)
         conn.commit()
+
+
+# Backward compatibility: DB_PATH as a property-like object
+class _DBPath:
+    def __str__(self):
+        return str(_get_db_path())
+    def __fspath__(self):
+        return str(_get_db_path())
+
+DB_PATH = _DBPath()

@@ -109,6 +109,9 @@ def login(request: Request, payload: UserLogin):
     """Verify credentials and return a short-lived JWT."""
     user = services.authenticate_user(payload.username, payload.password)
     if user is None:
+        # Alert n8n about failed login
+        client_ip = request.client.host if request.client else None
+        services.alert_failed_login(payload.username, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
@@ -316,3 +319,32 @@ def get_visit(
 def health():
     """Simple health check."""
     return {"status": "ok", "version": "0.1.0"}
+
+
+# ── Security Alert Endpoints (for n8n integration) ──────────────────────
+
+class BlockedPromptAlert(BaseModel):
+    user_id: Optional[int] = None
+    attack_type: str
+    payload: str
+    ip: Optional[str] = None
+
+
+@router.post("/security/blocked-prompt", response_model=dict)
+def report_blocked_prompt(alert: BlockedPromptAlert, request: Request):
+    """Receive blocked prompt report from agent and forward to n8n."""
+    client_ip = alert.ip or (request.client.host if request.client else None)
+    services.alert_blocked_prompt(alert.user_id, alert.attack_type, alert.payload, client_ip)
+    return {"success": True, "message": "Alert forwarded to monitoring"}
+
+
+class AIErrorAlert(BaseModel):
+    endpoint: str
+    error: str
+
+
+@router.post("/security/ai-error", response_model=dict)
+def report_ai_error(alert: AIErrorAlert):
+    """Receive AI service error and forward to n8n error workflow."""
+    services.alert_ai_service_error(alert.endpoint, alert.error)
+    return {"success": True, "message": "Error alert forwarded to monitoring"}

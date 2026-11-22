@@ -1,0 +1,262 @@
+{
+  "name": "DarPilot Security Alerting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "security/blocked-prompt",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-blocked-prompt",
+      "name": "Webhook: Blocked Prompt",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "security/failed-login",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-failed-login",
+      "name": "Webhook: Failed Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.blocked_count || 0 }}",
+              "operation": "greaterThan",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "check-blocked-threshold",
+      "name": "Check: Blocked Count > 5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.failed_count || 0 }}",
+              "operation": "greaterThan",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "check-failed-threshold",
+      "name": "Check: Failed Login Count > 10",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "const count = $getWorkflowStaticData('global').blocked_count || 0;\n$getWorkflowStaticData('global').blocked_count = count + 1;\nreturn [{ json: { blocked_count: count + 1, timestamp: new Date().toISOString(), ...$json } }];"
+      },
+      "id": "increment-blocked",
+      "name": "Increment Blocked Counter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const count = $getWorkflowStaticData('global').failed_count || 0;\n$getWorkflowStaticData('global').failed_count = count + 1;\nreturn [{ json: { failed_count: count + 1, timestamp: new Date().toISOString(), ...$json } }];"
+      },
+      "id": "increment-failed",
+      "name": "Increment Failed Login Counter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "security@darpilot.local",
+        "toEmail": "admin@darpilot.local",
+        "subject": "🚨 DarPilot Security Alert: Repeated Blocked Prompts",
+        "text": "Alert triggered: {{ $json.blocked_count }} blocked prompts detected in current window.\n\nLatest blocked prompt:\n- User ID: {{ $json.user_id }}\n- Attack Type: {{ $json.attack_type }}\n- Payload: {{ $json.payload }}\n- Timestamp: {{ $json.timestamp }}\n\nPlease investigate.",
+        "options": {}
+      },
+      "id": "send-blocked-alert",
+      "name": "Send Email: Blocked Prompts Alert",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "security@darpilot.local",
+        "toEmail": "admin@darpilot.local",
+        "subject": "🚨 DarPilot Security Alert: Repeated Failed Logins",
+        "text": "Alert triggered: {{ $json.failed_count }} failed login attempts detected.\n\nLatest failed login:\n- Username: {{ $json.username }}\n- IP: {{ $json.ip }}\n- Timestamp: {{ $json.timestamp }}\n\nPossible brute-force attack. Please investigate.",
+        "options": {}
+      },
+      "id": "send-failed-alert",
+      "name": "Send Email: Failed Logins Alert",
+      "type": "n8n-nodes-base.sendEmail",
+      "typeVersion": 1,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "functionCode": "return [{ json: { success: true, message: 'Alert received and logged' } }];"
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 600]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseData": {
+          "json": {
+            "success": true,
+            "message": "Alert processed"
+          }
+        }
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 600]
+    }
+  ],
+  "connections": {
+    "Webhook: Blocked Prompt": {
+      "main": [
+        [
+          {
+            "node": "Increment Blocked Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Failed Login": {
+      "main": [
+        [
+          {
+            "node": "Increment Failed Login Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Blocked Counter": {
+      "main": [
+        [
+          {
+            "node": "Check: Blocked Count > 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Increment Failed Login Counter": {
+      "main": [
+        [
+          {
+            "node": "Check: Failed Login Count > 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Blocked Count > 5": {
+      "main": [
+        [
+          {
+            "node": "Send Email: Blocked Prompts Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check: Failed Login Count > 10": {
+      "main": [
+        [
+          {
+            "node": "Send Email: Failed Logins Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email: Blocked Prompts Alert": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email: Failed Logins Alert": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond OK": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1"
+}

@@ -35,6 +35,8 @@ def clean_db():
     with sqlite3.connect(str(DB_PATH)) as conn:
         for table in TABLES:
             conn.execute(f"DELETE FROM {table}")
+        # Reset auto-increment counters
+        conn.execute("DELETE FROM sqlite_sequence")
         conn.commit()
     yield
 
