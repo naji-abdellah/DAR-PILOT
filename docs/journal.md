@@ -47,4 +47,27 @@ This journal records learning progress, security insights, architectural decisio
 - Uses `executemany` with parameterized queries to insert data efficiently.
 - Verified: Ran the script and confirmed 100 rows inserted into the `listings` table.
 ---
-*Last updated: 2026-11-20*
+
+## M1: Data and API
+
+### Task: FastAPI CRUD and tests
+- Implemented layered CRUD for listings and leads: `routes.py` (FastAPI endpoints), `services.py` (validation + business logic), `repositories.py` (parameterized queries). All SQL uses `?` placeholders; routes contain no SQL.
+- Fixed a router bug: `routes.py` was exporting a `FastAPI` app instead of an `APIRouter`, which broke `app.include_router()`. Routes now live on an `APIRouter` included by the main app.
+- Made `database.DB_PATH` overridable via the `DARPILOT_DB_PATH` environment variable so tests use a throwaway database and stay isolated.
+- Added `tests/test_api.py` covering happy paths (create/list/get listings, leads, visits) and bad inputs (invalid status, negative price, oversized title, missing fields, bad email), plus SQL-injection cases confirming payloads are stored literally and never executed.
+- Fixed `GET /listings` to return all listings when no status filter is given (it previously defaulted to `available`, contradicting its docstring).
+- Ran tests: `21 passed`. Confirmed SQL-injection and oversized/malformed payloads are rejected or stored harmlessly.
+---
+*Last updated: 2026-11-21*
+
+## M2: Authentication & Roles
+
+### Task: Auth backend (password hashing, JWT, role enforcement)
+- Created `backend/auth.py`: bcrypt password hashing, short-lived HS256 JWTs (30-min expiry) signed with `DARPILOT_SECRET_KEY` (env, never hardcoded), `get_current_user` dependency, and `require_role` dependency.
+- Added `services.register_user_account` (hashes password server-side, min 8 chars) and `services.authenticate_user` (verify bcrypt hash).
+- Added `/auth/register` and `/auth/login` endpoints. Login is rate-limited (configurable `DARPILOT_LOGIN_RATE_LIMIT`, default 5/min) via slowapi, keyed by client IP.
+- Protected endpoints: `POST /listings` (agent/admin), `GET /leads/{id}` and `GET /leads/listing/{lid}` (agent/admin — leads contain PII), `POST /visits` and `GET /visits/{id}` (any authenticated user). Listings read and lead creation stay public.
+- `backend/app.py`: strict CORS (origins from `DARPILOT_CORS_ORIGINS`, locked down by default), security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, CSP), rate-limit 429 handler, SlowAPI middleware.
+- Added `tests/test_api.py` authorization cases: unauth → 401, viewer → 403 on create-listing and read-leads, agent/admin → 201 on create-listing, invalid/expired tokens → 401. SQL-injection path tests confirm 422/401, never execution.
+- Ran tests: `29 passed`.
+- Next: frontend Next.js pages (M2) and the "break it" permission-removal regression test.

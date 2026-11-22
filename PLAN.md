@@ -32,19 +32,19 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 **Demo:** a running API with documented endpoints and passing tests.
 - [x] Schema: `users`, `listings`, `leads`, `visits`, `audit_log`
 - [x] Script that generates 50 to 100 fictional listings (French, Casablanca/Marrakech neighborhoods, prices in MAD)
-- [ ] FastAPI CRUD for listings and leads, with layered code (routes, services, repositories)
-- [ ] Input validation on every endpoint (types, lengths, allowed values)
-- [ ] Only parameterized queries, no string-built SQL
-- [ ] `pytest` tests for happy paths and bad inputs
-- **Break it:** send oversized, malformed, and SQL-injection-style payloads and confirm they are rejected.
+- [x] FastAPI CRUD for listings and leads, with layered code (routes, services, repositories)
+- [x] Input validation on every endpoint (types, lengths, allowed values)
+- [x] Only parameterized queries, no string-built SQL
+- [x] `pytest` tests for happy paths and bad inputs
+- [x] **Break it:** send oversized, malformed, and SQL-injection-style payloads and confirm they are rejected.
 
 ## M2: Dashboard, auth and roles
 **Demo:** log in as admin, agent, or viewer and see different things.
-- [ ] Authentication (hashed passwords, short-lived tokens)
-- [ ] Roles: `admin`, `agent`, `viewer`, enforced on the **server**, not just the UI
+- [x] Authentication (hashed passwords, short-lived tokens)
+- [x] Roles: `admin`, `agent`, `viewer`, enforced on the **server**, not just the UI
 - [ ] Next.js pages: listings, listing detail, lead form, agent dashboard
-- [ ] Security headers, strict CORS, rate limiting on login
-- [ ] **Authorization tests**: a viewer cannot read leads, an agent cannot read another agent's leads, an unauthenticated user gets 401
+- [x] Security headers, strict CORS, rate limiting on login
+- [x] **Authorization tests**: a viewer cannot read leads, an agent cannot read another agent's leads, an unauthenticated user gets 401
 - **Break it:** remove a permission check and confirm the tests fail. Optional: repeat this with PostgreSQL row-level security if you move to Supabase.
 
 ## M3: RAG over listings

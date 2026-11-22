@@ -8,12 +8,14 @@ SQL strings.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
 # The SQLite database file lives next to this module's package root.
-DB_PATH = Path(__file__).resolve().parent.parent / "darpilot.db"
+# Override with DARPILOT_DB_PATH (e.g. a temp file in tests) for isolation.
+DB_PATH = Path(os.environ.get("DARPILOT_DB_PATH", Path(__file__).resolve().parent.parent / "darpilot.db"))
 
 
 @contextmanager
