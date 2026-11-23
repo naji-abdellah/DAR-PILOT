@@ -45,7 +45,7 @@ class FakeLLMClient(LLMClient):
 
         if not listings:
             return (
-                "Je n'ai trouv aucune annonce correspondant votre recherche."
+                "Je n'ai pas trouvé d'annonce correspondant à votre recherche."
                 if french
                 else "I couldn't find any listings matching your search."
             )

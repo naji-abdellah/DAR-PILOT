@@ -97,7 +97,7 @@ An AI assistant for a (fictional) Moroccan real-estate agency. It answers questi
 - [x] **M7.5** Protect `/security/*` endpoints: require authentication + rate limiting. Write failing tests.
 - [x] **M7.6** Add rate limiting to `/ask` and `/search` (LLM-cost endpoints). Write failing test.
 - [x] **M7.7** Fix Gemini API key: use `x-goog-api-key` header instead of URL param. Update `ResilientLLMClient`.
-- [x] **M7.8** Fix indirect injection defenses: `/ask` must call `validate_input` and `redact_pii`; prompt built with safe templating (no plain concatenation); `conversation_history` sanitized and `MAX_HISTORY_LENGTH` enforced.
+- [ ] **M7.8** Fix indirect injection defenses: `/ask` must call `validate_input` and `redact_pii`; prompt built with safe templating (no plain concatenation); `conversation_history` sanitized and `MAX_HISTORY_LENGTH` enforced.
 - [x] **M7.9** Enable SQLite foreign keys (`PRAGMA foreign_keys=ON`).
 
 ## M8: Fix repo, CI, and environment issues

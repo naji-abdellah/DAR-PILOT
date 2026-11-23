@@ -161,7 +161,7 @@ def ask(request: Request, payload: AskRequest):
 
     if not relevant:
         return {
-            "answer": ("Je n'ai trouv aucune annonce correspondant votre recherche."
+            "answer": ("Je n'ai pas trouvé d'annonce correspondant à votre recherche."
                        if _looks_french(question)
                        else "I couldn't find any listings matching your search."),
             "sources": [],
@@ -170,7 +170,8 @@ def ask(request: Request, payload: AskRequest):
 
     client = get_llm_client()
     
-    # Sanitize listing chunk text to prevent role-marker forgery
+    # Sanitize ALL listing fields to prevent role-marker forgery and injection
+    # via title/city/neighborhood (not just chunk_text).
     def sanitize_chunk(text: str) -> str:
         """Remove potential role markers and control sequences from listing text."""
         # Remove SYSTEM/USER/ASSISTANT role markers
@@ -182,8 +183,8 @@ def ask(request: Request, payload: AskRequest):
         return text.strip()
 
     context_lines = "\n".join(
-        f"- [id: {r['listing_id']}] {r['title']} ({r['city']}, {r['neighborhood']}) "
-        f"{r['price_mad']} MAD, {r['property_type']}, {r['status']}. {sanitize_chunk(r['chunk_text'])}"
+        f"- [id: {r['listing_id']}] {sanitize_chunk(r['title'])} ({sanitize_chunk(r['city'])}, {sanitize_chunk(r['neighborhood'])}) "
+        f"{r['price_mad']} MAD, {sanitize_chunk(r['property_type'])}, {sanitize_chunk(r['status'])}. {sanitize_chunk(r['chunk_text'])}"
         for r in relevant
     )
     lang = "French" if _looks_french(question) else "English"
@@ -246,8 +247,16 @@ def create_listing(
         raise HTTPException(status_code=422, detail=str(e))
 
 @router.post("/leads", response_model=dict, status_code=201)
-def create_lead(payload: LeadCreate):
-    """Create a new lead (public capture form)."""
+@limiter.limit("10/minute")
+def create_lead(
+    request: Request,
+    payload: LeadCreate,
+):
+    """Create a new lead (public capture form).
+
+    Status is forced to ``"new"`` server-side; client-set status is ignored.
+    Rate-limited to prevent spam.
+    """
     try:
         return services.create_lead(
             name=payload.name,
@@ -255,7 +264,6 @@ def create_lead(payload: LeadCreate):
             email=payload.email,
             message=payload.message,
             listing_id=payload.listing_id,
-            status=payload.status,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

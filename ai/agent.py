@@ -19,7 +19,6 @@ import requests
 from ai.llm import LLMClient, get_llm_client
 from ai import rag
 from backend import services
-from backend import auth
 
 
 # ── Guardrails Configuration ──────────────────────────────────────────────
@@ -34,11 +33,13 @@ ALLOWED_TOOLS = frozenset(["search_listings", "create_lead", "book_visit", "esca
 MAX_TOOL_ARG_LEN = 500
 
 # PII patterns to redact before sending to LLM
+# Anchored Moroccan phone formats only — avoids false positives on prices/years
 PII_PATTERNS = [
     (re.compile(r"\b\d{10}\b"), "[PHONE]"),  # 10-digit phone
-    (re.compile(r"\b0[5-7]\d{8}\b"), "[PHONE]"),  # Moroccan mobile
+    (re.compile(r"\b0[5-7]\d{8}\b"), "[PHONE]"),  # Moroccan mobile (05xxxxxxxx through 07xxxxxxxx)
+    (re.compile(r"\+212\s?[5-7]\d{8}\b"), "[PHONE]"),  # +212 prefix
+    (re.compile(r"\b00212\s?[5-7]\d{8}\b"), "[PHONE]"),  # 00212 prefix
     (re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"), "[EMAIL]"),
-    (re.compile(r"\b\d{1,3}[-.]?\d{1,3}[-.]?\d{1,4}\b"), "[PHONE]"),  # Various phone formats
 ]
 
 # ── Prompt Injection Detection Patterns ────────────────────────────────────
@@ -409,27 +410,19 @@ def log_agent_action(
 
 # ── n8n Alerting ────────────────────────────────────────────────────────────
 
-N8N_API_URL = os.environ.get("N8N_API_URL", "http://localhost:8000")
-
-
 def alert_blocked_prompt(
     user_id: Optional[int],
     attack_type: str,
     payload: str,
     ip: Optional[str] = None,
 ) -> bool:
-    """Send blocked prompt alert to backend security endpoint."""
-    url = f"{N8N_API_URL}/security/blocked-prompt"
-    try:
-        resp = requests.post(url, json={
-            "user_id": user_id,
-            "attack_type": attack_type,
-            "payload": payload[:500],
-            "ip": ip,
-        }, timeout=5)
-        return resp.status_code == 200
-    except Exception:
-        return False
+    """Send blocked prompt alert via the service layer (routes to n8n webhook)."""
+    return services.alert_blocked_prompt(
+        user_id=user_id,
+        attack_type=attack_type,
+        payload=payload,
+        ip=ip,
+    )
 
 
 # ── Agent ──────────────────────────────────────────────────────────────────

@@ -215,7 +215,12 @@ def create_lead(
     listing_id: Optional[int],
     status: str = "new",
 ) -> Dict[str, Any]:
-    """Create a new lead after validating inputs."""
+    """Create a new lead after validating inputs.
+
+    ``status`` is forced to ``"new"`` for public lead capture (prevents
+    client-set status).  When ``listing_id`` is provided the listing must
+    exist, otherwise a ``ValueError`` is raised.
+    """
     name = _validate_required_string(name, "name", MAX_NAME_LEN)
     phone = _validate_optional_string(phone, "phone", MAX_PHONE_LEN) or ""
     email = _validate_required_string(email, "email", MAX_EMAIL_LEN)
@@ -224,8 +229,10 @@ def create_lead(
     message = _validate_optional_string(message, "message", MAX_MESSAGE_LEN) or ""
     if listing_id is not None and not isinstance(listing_id, int):
         raise TypeError("listing_id must be an integer or None")
-    if status not in repositories.VALID_LEAD_STATUSES:
-        raise ValueError(f"Invalid status: {status!r}. Must be one of: {repositories.VALID_LEAD_STATUSES}")
+    if listing_id is not None and repositories.get_listing_by_id(listing_id) is None:
+        raise ValueError("Listing not found")
+    # Force "new" status for public lead capture (security: prevent client-set status)
+    status = "new"
     lead_id = repositories.create_lead(name, phone, email, message, listing_id, status)
     return {
         "id": lead_id,
@@ -316,6 +323,15 @@ def create_visit(
     listing = repositories.get_listing_by_id(listing_id)
     if listing is None:
         raise ValueError("Listing not found")
+
+    # Verify lead exists
+    lead = repositories.get_lead_by_id(lead_id)
+    if lead is None:
+        raise ValueError("Lead not found")
+
+    # Verify the lead belongs to the listing (when listing_id is set on the lead)
+    if lead.get("listing_id") is not None and lead.get("listing_id") != listing_id:
+        raise ValueError("Lead does not belong to this listing")
     
     # If agent_id provided, verify they own the listing
     if agent_id is not None:
